@@ -1,4 +1,3 @@
 #!/usr/bin/env bash
-# Get apache to run and return a page containing Hello Holberton
-
-service apache2 start
+# Debug a server with Apache stoppe d
+sudo service apache2 start
