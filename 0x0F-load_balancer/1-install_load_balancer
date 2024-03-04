@@ -1,39 +1,35 @@
 #!/usr/bin/env bash
-# Installs HAProxy
+# 
+# Configure Nginx so that its HTTP response contains a custom header.
 
-sudo apt-get update
-apt-get -y install --no-install-recommends software-properties-common
-add-apt-repository -y ppa:vbernat/haproxy-2.6
-apt-get -y install haproxy=2.6.\*
+# Update packages
+sudo apt update
 
+# Add HAProxy PPA
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:vbernat/haproxy-1.8 -y
+sudo apt update
 
-DOMAIN_NAME="sigmacodes.tech"
-CONFIG_FILE="/etc/haproxy/haproxy.cfg"
-INIT_CONFIG_FILE="/etc/default/haproxy"
-check_init=""
-grep -i "ENABLED=1" < $INIT_CONFIG_FILE > check_init
+# Install HAProxy
+sudo apt install -y haproxy=1.8.\*
 
+hgproxy_conf_file="/etc/haproxy/haproxy.cfg"
 
-HA_PROXY_CONFIG=\
-"
-\nfrontend $DOMAIN_NAME
-\tbind *:80
-\tdefault_backend $DOMAIN_NAME-backend\n
+# Configure Load Balancer
+fname="frontend http"
+fbind="bind *:80"
+fmode="mode http"
+fdefault="default_backend web-backend"
+frontend="$fname\n\t$fbind\n\t$fmode\n\t$fdefault\n"
 
-backend $DOMAIN_NAME-backend
-\tserver 74461-web-01 100.26.233.107:80 check
-\tserver 74461-web-02 18.204.8.41:80 check\n
-"
+bname="backend web-backend"
+bbalance="balance roundrobin"
+bserver1="server web1 34.148.28.190:80 check"
+bserver2="server web2 18.207.93.156:80 check"
+backend="$bname\n\t$bbalance\n\t$bserver1\n\t$bserver2"
 
-# Create config file
-touch $CONFIG_FILE
-echo -e "$HA_PROXY_CONFIG" | sudo tee -a $CONFIG_FILE
+sudo sed -i "$ a $frontend" $hgproxy_conf_file
+sudo sed -i "$ a $backend" $hgproxy_conf_file
 
-# Check if init is already enabled, else enable
-if [ -z "$check_init" ]
-then
-    echo "ENABLED=1" | sudo tee $INIT_CONFIG_FILE
-fi
-  
-haproxy -f $CONFIG_FILE
+# Restart HAProxy
 sudo service haproxy restart
